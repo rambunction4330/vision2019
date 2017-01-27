@@ -14,17 +14,17 @@ int main( ) {
   char this_test_filename[255];
   int xres = 1920;
   int yres = 1080;
-  VideoCapture capture(1);
+  VideoCapture capture(0);
   // want 1920X1080 ?
   capture.set(CV_CAP_PROP_FRAME_WIDTH, 1920);
   capture.set(CV_CAP_PROP_FRAME_HEIGHT, 1080);
-  capture.set(CV_CAP_PROP_FPS,30);
+  capture.set(CV_CAP_PROP_FPS,10);
   if(!capture.isOpened()) {
     cout << "Failed to connect to the camera." << endl;
   }
   Mat frame, ram, framecopy, hsv, binary, tmpBinary, clean;
 //Change maxFrames for maximum amount of frames saved.
-  int maxFrames = 600;
+  int maxFrames = 200;
   for(int i=0; i < maxFrames; i++) {
     cout << "Frame " << i << endl;
     capture >> frame;
@@ -38,12 +38,12 @@ int main( ) {
     
    //resize(frame, ram, ram.size(), .35 , .35, INTER_AREA);
    sprintf(this_test_filename, "%d%s", i, test_filename);
-   imwrite(this_test_filename, ram);
+   imwrite(this_test_filename, frame);
 
     cvtColor(framecopy, hsv, CV_BGR2HSV);
-    inRange(hsv, Scalar(30,22,158), Scalar(100,255,255), binary);
-  //  sprintf(this_binary_filename, "%d%s", i, binary_filename);
-//    imwrite(this_binary_filename, binary);
+    inRange(hsv, Scalar(38,24,197), Scalar(101,255,255), binary);
+    sprintf(this_binary_filename, "%d%s", i, binary_filename);
+    imwrite(this_binary_filename, binary);
 
     std::vector < std::vector<Point> > contours;
     std::vector < std::vector<Point> > filteredContours;

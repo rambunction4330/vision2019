@@ -8,26 +8,27 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <iostream>
+#include <limits>
 #include "opencv2/opencv.hpp"
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/cudaimgproc.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 
 #define PORTNUMBER  9001 
 #define DONOTKNOW 10000000
 
 using namespace std;
 using namespace cv;
-using namespace cv::cuda;
-using namespace cv::gpu;
+//using namespace cv::cuda;
+//using namespace cv::gpu;
 
 //added for further changes
-int iLowH = 99;
-int iHighH = 167;
-int iLowS = 109; 
+int iLowH = 38;
+int iHighH = 101;
+int iLowS = 24; 
 int iHighS = 255;
-int iLowL = 85;
-int iHighL = 255;
-int fr = 10;
+int iLowV = 197;
+int iHighV = 255;
+int fr = 29;
 int xres = 1920;
 int yres = 1080;
 double cameraAngle = 70.42;
@@ -35,13 +36,15 @@ double yCameraAngle = (cameraAngle*9)/16;
 double relativeBearing = DONOTKNOW;
 double globalYAngle = DONOTKNOW;
 pthread_mutex_t dataLock;
-
+Mat src;
 // forward declaration of functions
 void *handleClient(void *arg);
 void receiveNextCommand(char*, int);
 void *capture(void *arg);
+//import images
 
-int main(void)
+
+int main(int , char** argv)
 {
   int n, s;
   socklen_t len;
@@ -49,13 +52,13 @@ int main(void)
   int number;
   struct sockaddr_in name;
   pthread_mutex_init(&dataLock, NULL);
-
+  src = imread(argv[1], 1 );
   // create the socket
   if ( (s = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     perror("socket");
     exit(1);
   }
-
+  
   memset(&name, 0, sizeof(struct sockaddr_in));
   name.sin_family = AF_INET;
   name.sin_port = htons(PORTNUMBER);
@@ -127,36 +130,37 @@ void *capture(void *arg) {
   if(!capture.isOpened()) {
     cout << "Failed to connect to the camera." << endl;
   }
-  gpu::GpuMat frame, dst, hsv, binary, tmpBinary;
+  Mat frame, dst, hsv, binary, tmpBinary;
+  
+  //cv::cuda::GpuMat gputhing
   //Ideal shape of high goal reflective tape.
-  std::vector<Point> shape;
-  shape.push_back(Point2d(0,0));
-  shape.push_back(Point2d(0,5));
-  shape.push_back(Point2d(2,5));
-  shape.push_back(Point2d(2,0));
+  //std::vector<Point> shape;
+  
   while(true) {
 		
     capture >> frame;
     if(dst.empty()) {
-      cout << "failed to capture an image" << endl;
+      //cout << "failed to capture an image" << endl;
     }
     
     //resize(dst ,frame, frame.size(), .35, .35, INTER_AREA);   
-    cvtColor(frame, hsv, CV_BGR2HLS);
-    inRange(hsv, Scalar(iLowH, iLowS, iLowL), Scalar(iHighH, iHighS, iHighL), binary);
+    cvtColor(frame, hsv, CV_BGR2HSV);
+    inRange(hsv, Scalar(50,190,65), Scalar(99,255,255), binary);
 
     std::vector < std::vector<Point> > contours;
+    std::vector < std::vector<Point> > filteredContours;
+    std::vector<Point2d> centers;
     tmpBinary = binary.clone();
     findContours(tmpBinary, contours, RETR_LIST, CHAIN_APPROX_NONE);
     tmpBinary.release();
     
-    double bestShapeMatch = DONOTKNOW;
-    Point2d pointOfBestShapeMatch;
-    double minimumArea = 350;
-    bool foundBestMatch = false;    
+    //double bestShapeMatch = DONOTKNOW;
+    //Point2d pointOfBestShapeMatch;
+    double minimumArea = 300;
+    //bool foundBestMatch = false;    
 
     for (size_t contourIdx = 0; contourIdx < contours.size(); contourIdx++) {
-
+      Point2d center;
       const Moments moms = moments(Mat(contours[contourIdx]));
  
       // filter blobs which are too small
@@ -164,29 +168,41 @@ void *capture(void *arg) {
       if ( area < minimumArea ) {
         continue;
       }
-      double shapematch = matchShapes(shape, contours[contourIdx], CV_CONTOURS_MATCH_I2, 0);
-      //A perfect match would be 0.
-      //Smaller is a better match.
-      if(shapematch > 4){
-		  continue;
-	  }
-	  cout << "match value = " << shapematch << endl;
-      if(shapematch < bestShapeMatch){
-        bestShapeMatch = shapematch;
-        pointOfBestShapeMatch = Point2d(moms.m10 / moms.m00, moms.m01 / moms.m00);
-        foundBestMatch = true;
-      }
+      Rect rect = boundingRect(contours[contourIdx]);
+      double width = rect.width;
+      double height = rect.height;
+      double aspectRatio = height / width;
+      double perfectAspectRatio = 2.5;
+      //double bigAspectRatio = (4/15);
+      //double smallAspectRatio = (2/15);
+      double aspectRatioTolerance = 0.5;
+       if ( aspectRatio < perfectAspectRatio - aspectRatioTolerance ||
+         aspectRatio > perfectAspectRatio + aspectRatioTolerance ) {
+      continue;
+    }
+
+      double rectangularness = area / ( width * height );
+       if ( rectangularness < 0.7 ) {
+        continue;
+        }
+	printf("Area is %.2f\n", area);
+        center = Point2d(moms.m10 / moms.m00, moms.m01 / moms.m00);
+        filteredContours.push_back(contours[contourIdx]);
+        centers.push_back(center);
+        cout << "match value = " << rectangularness << endl; 
     
     }
-    
-    double angle = DONOTKNOW;
-    double yAngle = DONOTKNOW;
-    if (foundBestMatch) {
-      angle = (pointOfBestShapeMatch.x - (672/2))*cameraAngle/672;
-      yAngle = ((378/2) - pointOfBestShapeMatch.y )*yCameraAngle/672;
-      cout << "x = "  << pointOfBestShapeMatch.x << endl;
+     double angle = DONOTKNOW;
+     double yAngle = DONOTKNOW;
+      if ( centers.size() == 2 ) {
+     double centerX = (centers[0].x + centers[1].x)/2;
+     double centerY = (centers[0].y + centers[1].y)/2;
+     Point2d aimPoint = Point2d(centerX, centerY);
+     angle = (aimPoint.x - (1920/2))*cameraAngle/1920;
+      yAngle = ((1080/2) - aimPoint.y )*yCameraAngle/1080;
       cout << "xangle = " << angle << endl;
-      cout << "yAngle = " << yAngle << endl; 
+      cout << "yAngle = " << yAngle << endl;
+      
     }
   
     // obtain the lock and copy the data
@@ -196,6 +212,7 @@ void *capture(void *arg) {
     pthread_mutex_unlock(&dataLock);
   }
 }
+
 
 
 
