@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 2.8)
+project( Blob )
+find_package( OpenCV REQUIRED )
+add_executable( blob blob.cpp )
+target_link_libraries( blob ${OpenCV_LIBS} )
