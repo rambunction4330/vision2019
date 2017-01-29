@@ -126,7 +126,12 @@ void *capture(void *arg) {
   VideoCapture capture(0);
   capture.set(CV_CAP_PROP_FRAME_WIDTH, xres);
   capture.set(CV_CAP_PROP_FRAME_HEIGHT, yres);
-  capture.set(CV_CAP_PROP_FPS, fr);
+  //capture.set(CV_CAP_PROP_FPS, fr);
+  //capture.set(CV_CAP_PROP_BRIGHTNESS, 0);
+  //capture.set(CV_CAP_PROP_CONTRAST, 0);
+  //capture.set(CV_CAP_PROP_SATURATION, 255);
+  //capture.set(CV_CAP_PROP_GAIN, 0);
+  //capture.set(CV_CAP_PROP_)
   if(!capture.isOpened()) {
     cout << "Failed to connect to the camera." << endl;
   }
