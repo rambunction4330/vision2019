@@ -8,23 +8,43 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <iostream>
+#include <limits>
 #include "opencv2/opencv.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 
-#define PORTNUMBER  9001 
-#define DONOTKNOW 1000000
+#define PORTNUMBER  9002 
+#define DONOTKNOW 10000000
 
 using namespace std;
 using namespace cv;
+//using namespace cv::cuda;
+//using namespace cv::gpu;
 
+//added for further changes
+int iLowH = 38;
+int iHighH = 101;
+int iLowS = 24; 
+int iHighS = 255;
+int iLowV = 197;
+int iHighV = 255;
+int fr = 29;
+int xres = 1920;
+int yres = 1080;
+double cameraAngle = 70.42;
+double yCameraAngle = (cameraAngle*9)/16;
 double relativeBearing = DONOTKNOW;
+double globalYAngle = DONOTKNOW;
 pthread_mutex_t dataLock;
-
+Mat src;
 // forward declaration of functions
 void *handleClient(void *arg);
 void receiveNextCommand(char*, int);
 void *capture(void *arg);
+//import images
 
-int main(void)
+
+int main(int , char** argv)
 {
   int n, s;
   socklen_t len;
@@ -32,13 +52,13 @@ int main(void)
   int number;
   struct sockaddr_in name;
   pthread_mutex_init(&dataLock, NULL);
-
+  src = imread(argv[1], 1 );
   // create the socket
   if ( (s = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     perror("socket");
     exit(1);
   }
-
+  
   memset(&name, 0, sizeof(struct sockaddr_in));
   name.sin_family = AF_INET;
   name.sin_port = htons(PORTNUMBER);
@@ -70,16 +90,13 @@ int main(void)
     perror("listen");
     exit(1);
   }
+ 
+  pthread_t captureThreadId;
   int i = 3;
- pthread_t captureThreadId;
-    int captureThread = pthread_create(&captureThreadId, NULL, capture, (void*)&i);
+  int captureThread = pthread_create(&captureThreadId, NULL, capture, (void*)&i);
 
-    //1. Do the Math from pixel to angle 
-    //2. Bearing update double(angle) to a string update the thread then destroy thread 
-    // it is important to detach the thread since we don't care to join o$
-    // and not calling pthread_detach will create a memory leak
-    pthread_detach(captureThreadId);
-
+  // it is important to detach the thread to avoid memory leak
+  pthread_detach(captureThreadId);
 
   while(true) {
 
@@ -96,8 +113,7 @@ int main(void)
     // data requests prior to closing the connection
     pthread_t threadId;
     int thread = pthread_create(&threadId, NULL, handleClient, (void*) &ns);
-    // it is important to detach the thread since we don't care to join on the thread
-    // and not calling pthread_detach will create a memory leak
+    // it is important to detach the thread to avoid a memory leak
     pthread_detach(threadId);
   } 
   
@@ -105,91 +121,103 @@ int main(void)
   exit(0);
 }
 
-void *capture(void *arg)
-{  
-  double Diff, tmp, angle;
-  const char* source_filename = "source.jpg";
-  const char* binary_filename = "binary.jpg";
-  const char* clean_filename = "clean.jpg";
-  char this_source_filename[255];
-  char this_binary_filename[255];
-  char this_clean_filename[255];
+void *capture(void *arg) {  
 
   VideoCapture capture(0);
-  // want 1920X1080 ?
-  capture.set(CV_CAP_PROP_FRAME_WIDTH, 640);
-  capture.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
-  capture.set(CV_CAP_PROP_FPS, 10);
+  capture.set(CV_CAP_PROP_FRAME_WIDTH, xres);
+  capture.set(CV_CAP_PROP_FRAME_HEIGHT, yres);
+  //capture.set(CV_CAP_PROP_FPS, fr);
+  //capture.set(CV_CAP_PROP_BRIGHTNESS, 0);
+  //capture.set(CV_CAP_PROP_CONTRAST, 0);
+  //capture.set(CV_CAP_PROP_SATURATION, 255);
+  //capture.set(CV_CAP_PROP_GAIN, 0);
+  //capture.set(CV_CAP_PROP_)
   if(!capture.isOpened()) {
     cout << "Failed to connect to the camera." << endl;
   }
-  Mat frame, framecopy, hsv, binary, tmpBinary, clean;
-//Change maxFrames for maximum amount of frames saved.
+  Mat frame, dst, hsv, binary, tmpBinary;
   
+  //cv::cuda::GpuMat gputhing
+  //Ideal shape of high goal reflective tape.
+  //std::vector<Point> shape;
   
-  for(int i=0; i==i; i++) {
-	double greatestArea = -1;
-	double xOfGreatestArea = -1;
+  while(true) {
 		
-   // cout << "Frame " << i << endl;
     capture >> frame;
-    if(frame.empty()) {
-      cout << "failed to capture an image" << endl;
+    if(dst.empty()) {
+      //cout << "failed to capture an image" << endl;
     }
-    framecopy = frame.clone();
-    //sprintf(this_source_filename, "%d%s", i, source_filename);
-   // imwrite(this_source_filename, framecopy);
     
-    cvtColor(framecopy, hsv, CV_BGR2HSV);
-    inRange(hsv, Scalar(30,22,158), Scalar(105,255,255), binary);
-    //sprintf(this_binary_filename, "%d%s", i, binary_filename);
-   //imwrite(this_binary_filename, binary);
+    //resize(dst ,frame, frame.size(), .35, .35, INTER_AREA);   
+    cvtColor(frame, hsv, CV_BGR2HSV);
+    inRange(hsv, Scalar(50,190,65), Scalar(99,255,255), binary);
 
     std::vector < std::vector<Point> > contours;
-    //std::vector < std::vector<Point> > filteredContours;
+    std::vector < std::vector<Point> > filteredContours;
+    std::vector<Point2d> centers;
     tmpBinary = binary.clone();
     findContours(tmpBinary, contours, RETR_LIST, CHAIN_APPROX_NONE);
     tmpBinary.release();
-    //cvtColor( binary, clean, CV_GRAY2RGB );
-    //clean.setTo(Scalar(255,255,255));
-    //garea = greatest area
     
-    for (size_t contourIdx = 0; contourIdx < contours.size(); contourIdx++) {
-      //Point2d center;
-      Moments moms = moments(Mat(contours[contourIdx]));
+    //double bestShapeMatch = DONOTKNOW;
+    //Point2d pointOfBestShapeMatch;
+    double minimumArea = 300;
+    //bool foundBestMatch = false;    
 
+    for (size_t contourIdx = 0; contourIdx < contours.size(); contourIdx++) {
+      Point2d center;
+      const Moments moms = moments(Mat(contours[contourIdx]));
+ 
       // filter blobs which are too small
       double area = moms.m00;
-      if ( area < 300 ) {
+      if ( area < minimumArea ) {
         continue;
       }
-      if(area > greatestArea){
-		greatestArea = area;
-		xOfGreatestArea = moms.m10 / moms.m00;
-      }
-      //center  = Point2d(moms.m10 / moms.m00, moms.m01 / moms.m00);
-     // circle(clean, center, 2, Scalar(0), 2, 8, 0);
-      //filteredContours.push_back(contours[contourIdx]);
-    }
-    
-    angle = DONOTKNOW;
-    if ( xOfGreatestArea != -1 ) {
-       Diff = xOfGreatestArea - 320;
-	  //tmp = sqrt((640*640)+(480*480));
-	  angle = Diff*60/640;
-    }
-   cout << "x value of the greatest area = "  << xOfGreatestArea << endl;
-   cout << "angle = " << angle << endl; 
-    // obtain the lock and copy the data
-      pthread_mutex_lock(&dataLock);
-      relativeBearing = angle;
-      pthread_mutex_unlock(&dataLock);
+      Rect rect = boundingRect(contours[contourIdx]);
+      double width = rect.width;
+      double height = rect.height;
+      double aspectRatio = height / width;
+      double perfectAspectRatio = 2.5;
+      //double bigAspectRatio = (4/15);
+      //double smallAspectRatio = (2/15);
+      double aspectRatioTolerance = 0.5;
+       if (( aspectRatio < bigAspectRatio - aspectRatioTolerance ||
+         aspectRatio > bigAspectRatio + aspectRatioTolerance) || (aspectRatio < smallAspectRatio - aspectRatioTolerance || aspectRatio > smallAspectRatio + aspectRatioTolerance )) {
+         continue;
+       }
 
-    //drawContours( clean, filteredContours, -1, Scalar(0,255,0) );
-    //sprintf(this_clean_filename, "%d%s", i, clean_filename);
-   // imwrite(this_clean_filename, clean);
+     /* double rectangularness = area / ( width * height );
+       if ( rectangularness < 0.7 ) {
+        continue;
+        }*/
+	printf("Area is %.2f\n", area);
+        center = Point2d(moms.m10 / moms.m00, moms.m01 / moms.m00);
+        filteredContours.push_back(contours[contourIdx]);
+        centers.push_back(center);
+        cout << "match value = " << rectangularness << endl; 
+    
+    }
+     double angle = DONOTKNOW;
+     double yAngle = DONOTKNOW;
+      if ( centers.size() == 2 ) {
+     double centerX = (centers[0].x + centers[1].x)/2;
+     double centerY = (centers[0].y + centers[1].y)/2;
+     Point2d aimPoint = Point2d(centerX, centerY);
+     angle = (aimPoint.x - (1920/2))*cameraAngle/1920;
+      yAngle = ((1080/2) - aimPoint.y )*yCameraAngle/1080;
+      cout << "xangle = " << angle << endl;
+      cout << "yAngle = " << yAngle << endl;
+      
+    }
+  
+    // obtain the lock and copy the data
+    pthread_mutex_lock(&dataLock);
+    relativeBearing = angle;
+    globalYAngle = yAngle;
+    pthread_mutex_unlock(&dataLock);
   }
 }
+
 
 
 
@@ -213,15 +241,16 @@ void *handleClient(void *arg) {
       // obtain the lock and copy the data
       pthread_mutex_lock(&dataLock);
       double copyRelativeBearing = relativeBearing;
+      double copyGlobalYAngle = globalYAngle;
       pthread_mutex_unlock(&dataLock);
       
       // the protocol will send an empty line when the data transfer is complete
       int sendbufferLen = -1;
       if ( copyRelativeBearing == DONOTKNOW ) {
-		  sendbufferLen = sprintf(sendbuffer, "\n");
-	  } else {
-		  sendbufferLen = sprintf(sendbuffer, "rb=%.1f\n\n", copyRelativeBearing);
-	  }
+        sendbufferLen = sprintf(sendbuffer, "\n");
+      } else {
+        sendbufferLen = sprintf(sendbuffer, "rb=%.1f\nya=%.1f\n\n", copyRelativeBearing, copyGlobalYAngle);
+      }
 
       // write response to client
       write(ns, sendbuffer, sendbufferLen);

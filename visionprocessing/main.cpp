@@ -177,14 +177,18 @@ void *capture(void *arg) {
       double width = rect.width;
       double height = rect.height;
       double aspectRatio = height / width;
-      double perfectAspectRatio = 2.5;
-      //double bigAspectRatio = (4/15);
-      //double smallAspectRatio = (2/15);
-      double aspectRatioTolerance = 0.5;
-       if ( aspectRatio < perfectAspectRatio - aspectRatioTolerance ||
-         aspectRatio > perfectAspectRatio + aspectRatioTolerance ) {
-      continue;
-    }
+      //double perfectAspectRatio = 2.5;
+      double bigAspectRatio = (4/15);
+      double smallAspectRatio = (2/15);
+      double aspectRatioTolerance = 0.7;
+       if ( aspectRatio < bigAspectRatio - aspectRatioTolerance ||
+         aspectRatio > bigAspectRatio + aspectRatioTolerance ) {
+         continue;
+       }
+       if ( aspectRatio < smallAspectRatio - aspectRatioTolerance ||
+         aspectRatio > smallAspectRatio + aspectRatioTolerance ) {
+         continue;
+       }
 
       double rectangularness = area / ( width * height );
        if ( rectangularness < 0.7 ) {
