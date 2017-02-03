@@ -12,13 +12,15 @@
 #include "opencv2/opencv.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/cudaimgproc.hpp"
 
 #define PORTNUMBER  9001 
 #define DONOTKNOW 10000000
 
 using namespace std;
 using namespace cv;
-//using namespace cv::cuda;
+using namespace cv::cuda;
 //using namespace cv::gpu;
 
 //added for further changes
@@ -42,7 +44,7 @@ void *handleClient(void *arg);
 void receiveNextCommand(char*, int);
 void *capture(void *arg);
 //import images
-
+//gpu::setDevice(0);
 
 int main(int , char** argv)
 {
@@ -123,7 +125,7 @@ int main(int , char** argv)
 
 void *capture(void *arg) {  
 
-  VideoCapture capture(0);
+  VideoCapture capture(1);
   capture.set(CV_CAP_PROP_FRAME_WIDTH, xres);
   capture.set(CV_CAP_PROP_FRAME_HEIGHT, yres);
   //capture.set(CV_CAP_PROP_FPS, fr);
@@ -147,9 +149,11 @@ void *capture(void *arg) {
     if(dst.empty()) {
       //cout << "failed to capture an image" << endl;
     }
-    
+    GpuMat src_gpu, dst_gpu;
+    src_gpu.upload(frame);
     //resize(dst ,frame, frame.size(), .35, .35, INTER_AREA);   
-    cvtColor(frame, hsv, CV_BGR2HSV);
+    cuda::cvtColor(src_gpu, dst_gpu, CV_BGR2HSV);
+    dst_gpu.download(hsv);
     inRange(hsv, Scalar(50,190,65), Scalar(99,255,255), binary);
 
     std::vector < std::vector<Point> > contours;
