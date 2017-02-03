@@ -154,7 +154,7 @@ void *capture(void *arg) {
     //resize(dst ,frame, frame.size(), .35, .35, INTER_AREA);   
     cuda::cvtColor(src_gpu, dst_gpu, CV_BGR2HSV);
     dst_gpu.download(hsv);
-    inRange(hsv, Scalar(50,190,65), Scalar(99,255,255), binary);
+    inRange(hsv, Scalar(10,28,0), Scalar(102,255,255), binary);
 
     std::vector < std::vector<Point> > contours;
     std::vector < std::vector<Point> > filteredContours;
