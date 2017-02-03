@@ -125,7 +125,7 @@ int main(int , char** argv)
 
 void *capture(void *arg) {  
 
-  VideoCapture capture(1);
+  VideoCapture capture(0);
   capture.set(CV_CAP_PROP_FRAME_WIDTH, xres);
   capture.set(CV_CAP_PROP_FRAME_HEIGHT, yres);
   //capture.set(CV_CAP_PROP_FPS, fr);
@@ -181,24 +181,24 @@ void *capture(void *arg) {
       double width = rect.width;
       double height = rect.height;
       double aspectRatio = height / width;
-      //double perfectAspectRatio = 2.5;
-      double bigAspectRatio = (4/15);
-      double smallAspectRatio = (2/15);
-      double aspectRatioTolerance = 0.7;
-       if ( aspectRatio < bigAspectRatio - aspectRatioTolerance ||
-         aspectRatio > bigAspectRatio + aspectRatioTolerance ) {
+      double perfectAspectRatio = 2.5;
+      //double bigAspectRatio = (4/15);
+      //double smallAspectRatio = (2/15);
+      double aspectRatioTolerance = 0.5;
+       if ( aspectRatio < perfectAspectRatio - aspectRatioTolerance ||
+         aspectRatio > perfectAspectRatio + aspectRatioTolerance ) {
          continue;
        }
-       if ( aspectRatio < smallAspectRatio - aspectRatioTolerance ||
-         aspectRatio > smallAspectRatio + aspectRatioTolerance ) {
-         continue;
-       }
+//       if ( aspectRatio < smallAspectRatio - aspectRatioTolerance ||
+//         aspectRatio > smallAspectRatio + aspectRatioTolerance ) {
+//         continue;
+//       }
 
       double rectangularness = area / ( width * height );
-       if ( rectangularness < 0.7 ) {
+       if ( rectangularness < 0.6 ) {
         continue;
         }
-	printf("Area is %.2f\n", area);
+//	printf("Area is %.2f\n", area);
         center = Point2d(moms.m10 / moms.m00, moms.m01 / moms.m00);
         filteredContours.push_back(contours[contourIdx]);
         centers.push_back(center);
