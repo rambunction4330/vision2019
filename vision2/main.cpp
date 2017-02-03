@@ -177,17 +177,17 @@ void *capture(void *arg) {
       double width = rect.width;
       double height = rect.height;
       double aspectRatio = height / width;
-      double perfectAspectRatio = 2.5;
-      //double bigAspectRatio = (4/15);
-      //double smallAspectRatio = (2/15);
+      //double perfectAspectRatio = 2.5;
+      double bigAspectRatio = (4/15);
+      double smallAspectRatio = (2/15);
       double aspectRatioTolerance = 0.5;
        if (( aspectRatio < bigAspectRatio - aspectRatioTolerance ||
          aspectRatio > bigAspectRatio + aspectRatioTolerance) || (aspectRatio < smallAspectRatio - aspectRatioTolerance || aspectRatio > smallAspectRatio + aspectRatioTolerance )) {
          continue;
        }
 
-     /* double rectangularness = area / ( width * height );
-       if ( rectangularness < 0.7 ) {
+       double rectangularness = area / ( width * height );
+      /* if ( rectangularness < 0.7 ) {
         continue;
         }*/
 	printf("Area is %.2f\n", area);
