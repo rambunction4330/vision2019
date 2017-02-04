@@ -13,15 +13,19 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/core.hpp"
-#include "opencv2/cudaimgproc.hpp"
+#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/gpu/gpumat.hpp"
+//#include "opencv2/cudaimgproc.hpp"
+//#include "opencv2/core/cuda.hpp"
+//#include <opencv2/gpu/gpu.hpp> 
 
 #define PORTNUMBER  9001 
 #define DONOTKNOW 10000000
 
 using namespace std;
 using namespace cv;
-using namespace cv::cuda;
-//using namespace cv::gpu;
+//using namespace cv::cuda;
+using namespace cv::gpu;
 
 //added for further changes
 int iLowH = 38;
@@ -39,6 +43,8 @@ double relativeBearing = DONOTKNOW;
 double globalYAngle = DONOTKNOW;
 pthread_mutex_t dataLock;
 Mat src;
+GpuMat src_d;
+char* image_window = "Source Image";
 // forward declaration of functions
 void *handleClient(void *arg);
 void receiveNextCommand(char*, int);
@@ -46,7 +52,7 @@ void *capture(void *arg);
 //import images
 //gpu::setDevice(0);
 
-int main(int , char** argv)
+int main(int argc , char** argv)
 {
   int n, s;
   socklen_t len;
@@ -55,12 +61,13 @@ int main(int , char** argv)
   struct sockaddr_in name;
   pthread_mutex_init(&dataLock, NULL);
   src = imread(argv[1], 1 );
+  src_d.upload(src);
   // create the socket
   if ( (s = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     perror("socket");
     exit(1);
   }
-  
+  namedWindow( image_window, CV_WINDOW_AUTOSIZE );
   memset(&name, 0, sizeof(struct sockaddr_in));
   name.sin_family = AF_INET;
   name.sin_port = htons(PORTNUMBER);
@@ -142,7 +149,9 @@ void *capture(void *arg) {
   //cv::cuda::GpuMat gputhing
   //Ideal shape of high goal reflective tape.
   //std::vector<Point> shape;
-  // GpuMat src_gpu, cvt_gpu, thr_gpu, dst_gpu;
+  GpuMat src_gpu, cvt_gpu, thr_gpu, dst_gpu, norm_gpu;
+  double minVal; double maxVal; Point minLoc; Point maxLoc;
+  Point matchLoc;
   
   while(true) {
 		
@@ -150,13 +159,16 @@ void *capture(void *arg) {
     if(dst.empty()) {
       //cout << "failed to capture an image" << endl;
     }
-    GpuMat src_gpu, cvt_gpu, thr_gpu, dst_gpu;
+    // GpuMat src_gpu, cvt_gpu, thr_gpu, dst_gpu;
     src_gpu.upload(frame);
     //resize(dst ,frame, frame.size(), .35, .35, INTER_AREA);   
     // cv::cvtColor(src_gpu, dst_gpu, CV_BGR2HSV);
-    cuda::cvtColor(src_gpu, cvt_gpu, CV_RGB2GRAY);
-    cuda::threshold(cvt_gpu, thr_gpu, 65, 255, 0);
-    //cuda::matchTemplate()
+    gpu::cvtColor(src_gpu, cvt_gpu, CV_RGB2GRAY);
+    gpu::threshold(cvt_gpu, thr_gpu, 65, 255, 0);
+    gpu::matchTemplate(thr_gpu, src_d, dst_gpu , CV_TM_SQDIFF_NORMED);
+    gpu::normalize( dst_gpu, norm_gpu, 0, 1, NORM_MINMAX, -1, GpuMat() );
+    gpu::minMaxLoc( norm_gpu, &minVal, &maxVal, &minLoc, &maxLoc, GpuMat() );
+    matchLoc = minLoc;
     thr_gpu.download(binary);
     // inRange(hsv, Scalar(10,28,0), Scalar(102,255,255), binary);
 
@@ -209,6 +221,8 @@ void *capture(void *arg) {
         cout << "match value = " << rectangularness << endl; 
     
     }
+    rectangle( frame, matchLoc, Point( matchLoc.x + src_d.cols , matchLoc.y + src_d.rows ), Scalar(255,0,0), 2, 8, 0 );
+    
      double angle = DONOTKNOW;
      double yAngle = DONOTKNOW;
       if ( centers.size() == 2 ) {
@@ -219,7 +233,7 @@ void *capture(void *arg) {
       yAngle = ((1080/2) - aimPoint.y )*yCameraAngle/1080;
       cout << "xangle = " << angle << endl;
       cout << "yAngle = " << yAngle << endl;
-      
+      imshow(image_window, frame);
     }
   
     // obtain the lock and copy the data
