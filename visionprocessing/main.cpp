@@ -128,7 +128,7 @@ void *capture(void *arg) {
   VideoCapture capture(0);
   capture.set(CV_CAP_PROP_FRAME_WIDTH, xres);
   capture.set(CV_CAP_PROP_FRAME_HEIGHT, yres);
-  //capture.set(CV_CAP_PROP_FPS, fr);
+  // capture.set(CV_CAP_PROP_FPS, 3);
   //capture.set(CV_CAP_PROP_BRIGHTNESS, 0);
   //capture.set(CV_CAP_PROP_CONTRAST, 0);
   //capture.set(CV_CAP_PROP_SATURATION, 255);
@@ -142,6 +142,7 @@ void *capture(void *arg) {
   //cv::cuda::GpuMat gputhing
   //Ideal shape of high goal reflective tape.
   //std::vector<Point> shape;
+  // GpuMat src_gpu, cvt_gpu, thr_gpu, dst_gpu;
   
   while(true) {
 		
@@ -149,12 +150,15 @@ void *capture(void *arg) {
     if(dst.empty()) {
       //cout << "failed to capture an image" << endl;
     }
-    GpuMat src_gpu, dst_gpu;
+    GpuMat src_gpu, cvt_gpu, thr_gpu, dst_gpu;
     src_gpu.upload(frame);
     //resize(dst ,frame, frame.size(), .35, .35, INTER_AREA);   
-    cuda::cvtColor(src_gpu, dst_gpu, CV_BGR2HSV);
-    dst_gpu.download(hsv);
-    inRange(hsv, Scalar(10,28,0), Scalar(102,255,255), binary);
+    // cv::cvtColor(src_gpu, dst_gpu, CV_BGR2HSV);
+    cuda::cvtColor(src_gpu, cvt_gpu, CV_RGB2GRAY);
+    cuda::threshold(cvt_gpu, thr_gpu, 65, 255, 0);
+    //cuda::matchTemplate()
+    thr_gpu.download(binary);
+    // inRange(hsv, Scalar(10,28,0), Scalar(102,255,255), binary);
 
     std::vector < std::vector<Point> > contours;
     std::vector < std::vector<Point> > filteredContours;
