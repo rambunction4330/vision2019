@@ -13,19 +13,19 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/core.hpp"
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/gpu/gpumat.hpp"
-//#include "opencv2/cudaimgproc.hpp"
-//#include "opencv2/core/cuda.hpp"
-//#include <opencv2/gpu/gpu.hpp> 
+// #include "opencv2/gpu/gpu.hpp"
+// #include "opencv2/gpu/gpumat.hpp"
+#include "opencv2/cudaimgproc.hpp"
+#include "opencv2/core/cuda.hpp"
+#include "opencv2/cudaarithm.hpp"
 
 #define PORTNUMBER  9001 
 #define DONOTKNOW 10000000
 
 using namespace std;
 using namespace cv;
-//using namespace cv::cuda;
-using namespace cv::gpu;
+using namespace cv::cuda;
+// using namespace cv::gpu;
 
 //added for further changes
 int iLowH = 38;
@@ -150,8 +150,8 @@ void *capture(void *arg) {
   //Ideal shape of high goal reflective tape.
   //std::vector<Point> shape;
   GpuMat src_gpu, cvt_gpu, thr_gpu, dst_gpu, norm_gpu;
-  double minVal; double maxVal; Point minLoc; Point maxLoc;
-  Point matchLoc;
+  //double minVal; double maxVal; Point minLoc; Point maxLoc;
+  //Point matchLoc;
   
   while(true) {
 		
@@ -163,12 +163,15 @@ void *capture(void *arg) {
     src_gpu.upload(frame);
     //resize(dst ,frame, frame.size(), .35, .35, INTER_AREA);   
     // cv::cvtColor(src_gpu, dst_gpu, CV_BGR2HSV);
-    gpu::cvtColor(src_gpu, cvt_gpu, CV_RGB2GRAY);
-    gpu::threshold(cvt_gpu, thr_gpu, 65, 255, 0);
-    gpu::matchTemplate(thr_gpu, src_d, dst_gpu , CV_TM_SQDIFF_NORMED);
-    gpu::normalize( dst_gpu, norm_gpu, 0, 1, NORM_MINMAX, -1, GpuMat() );
-    gpu::minMaxLoc( norm_gpu, &minVal, &maxVal, &minLoc, &maxLoc, GpuMat() );
-    matchLoc = minLoc;
+    gpu::cvtColor(src_gpu, cvt_gpu, CV_BGR2GRAY);
+    gpu::blur(cvt_gpu, dst_gpu , Size(3,3));
+    gpu::Canny(dst_gpu, thr_gpu, 20 , 60, 3);
+    //gpu::threshold(cvt_gpu, thr_gpu, 65, 255, 0);
+    //gpu::matchTemplate(thr_gpu, src_d, dst_gpu , CV_TM_SQDIFF_NORMED);
+    
+    //cuda::normalize( dst_gpu, norm_gpu, 0, 1, NORM_MINMAX, -1, GpuMat() );
+    //cuda::minMaxLoc( norm_gpu, &minVal, &maxVal, &minLoc, &maxLoc, GpuMat() );
+   // matchLoc = minLoc;
     thr_gpu.download(binary);
     // inRange(hsv, Scalar(10,28,0), Scalar(102,255,255), binary);
 
