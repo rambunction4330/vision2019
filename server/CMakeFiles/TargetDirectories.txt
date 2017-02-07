@@ -1,0 +1,3 @@
+/home/jeffrey/vision2017/server/CMakeFiles/edit_cache.dir
+/home/jeffrey/vision2017/server/CMakeFiles/rebuild_cache.dir
+/home/jeffrey/vision2017/server/CMakeFiles/server.dir
