@@ -9,14 +9,15 @@ using namespace cv;
 using namespace std;
 
 /// Global variables
-Mat src, src_hls, color_filtered;
+Mat src, src_hls, color_filtered, test1, test2, test3;
 int iLowH = 0;
 int iHighH = 179;
 int iLowS = 28; 
 int iHighS = 255;
 int iLowL = 0;
 int iHighL = 255;
-
+int thresh = 100;
+int max_thresh = 255;
 const char* controls_window = "Controls";
 const char* color_filter_window = "Binary Image";
 const char* cleaned_window = "Cleaned Image";
@@ -39,6 +40,7 @@ int main( int, char** argv )
   createTrackbar( "HighS: ", controls_window, &iHighS, 255, clean_demo );
   createTrackbar( "LowL: ", controls_window, &iLowL, 255, clean_demo );
   createTrackbar( "HighL: ", controls_window, &iHighL, 255, clean_demo );
+  createTrackbar( " Canny thresh:", controls_window, &thresh, max_thresh, clean_demo );
   imshow( controls_window, src );
 
   clean_demo( 0, 0 );
@@ -54,15 +56,20 @@ void clean_demo( int, void* )
   inRange( src_hls, Scalar(iLowH, iLowS, iLowL), Scalar(iHighH, iHighS, iHighL), color_filtered ); 
   namedWindow( color_filter_window, CV_WINDOW_AUTOSIZE );
   imshow( color_filter_window, color_filtered );
+  cvtColor( src , test1 , CV_BGR2GRAY);
+  blur( test1, test2, Size(3,3) );
+  Canny(test2 , test3 , thresh , thresh*2 , 3);
 
   std::vector < std::vector<Point> > contours;
   std::vector < std::vector<Point> > filteredContours;
   std::vector<Point2d> centers;
   
   Mat tmpBinaryImage = color_filtered.clone();
-  findContours(tmpBinaryImage, contours, RETR_LIST, CHAIN_APPROX_NONE);
+  findContours(test3, contours, RETR_LIST, CHAIN_APPROX_NONE);
   Mat cleanedImage;
-  cvtColor( color_filtered, cleanedImage, CV_GRAY2RGB );
+  cvtColor( test3, cleanedImage, CV_GRAY2RGB );
+  
+
   cleanedImage.setTo(Scalar(255,255,255));
   
   for (size_t contourIdx = 0; contourIdx < contours.size(); contourIdx++) {
@@ -86,13 +93,13 @@ void clean_demo( int, void* )
          aspectRatio > perfectAspectRatio + aspectRatioTolerance ) {
       continue;
     }
-    else if(aspectRatio < smallAspectRatio - aspectRatioTolerance || aspectRatio > smallAspectRatio + aspectRatioTolerance){
-	continue;
-	}
+    // else if(aspectRatio < smallAspectRatio - aspectRatioTolerance || aspectRatio > smallAspectRatio + aspectRatioTolerance){
+	// continue;
+	// }
 
-       else if(aspectRatio < bigAspectRatio - aspectRatioTolerance || aspectRatio > bigAspectRatio + aspectRatioTolerance){
-	continue;
-	}
+       // else if(aspectRatio < bigAspectRatio - aspectRatioTolerance || aspectRatio > bigAspectRatio + aspectRatioTolerance){
+	// continue;
+//	}
 
     double rectangularness = area / ( width * height );
     if ( rectangularness < 0.7 ) {
@@ -101,18 +108,19 @@ void clean_demo( int, void* )
 	
     printf("Area is %.2f\n", area);
     center = Point2d(moms.m10 / moms.m00, moms.m01 / moms.m00);
-    circle( cleanedImage, center, 2, Scalar(0), 2, 8, 0);
+    circle( cleanedImage, center, 2, Scalar(255,0,0), 2, 8, 0);
     filteredContours.push_back(contours[contourIdx]);
     centers.push_back(center);
   }
 
   drawContours( cleanedImage, filteredContours, -1, Scalar(0,255,0) );
-  if ( centers.size() == 2 ) {
-    double centerX = (centers[0].x + centers[1].x)/2;
-    double centerY = (centers[0].y + centers[1].y)/2;
+  if ( centers.size() > 1 ) {
+    double centerX = (centers[1].x + centers[2].x)/2;
+    double centerY = (centers[1].y + centers[2].y)/2;
     printf("Aim Point is (%.2f, %.2f)\n", centerX, centerY);
     Point2d aimPoint = Point2d(centerX, centerY);
     circle(cleanedImage, aimPoint, 2, Scalar(0,0,255), 2, 8, 0);
+    circle(cleanedImage, Point2d(centers[0].x, centers[0].y) , 2 , Scalar(255,0,255), 2 , 8 , 0);
   }
  
   namedWindow( cleaned_window, CV_WINDOW_AUTOSIZE );
