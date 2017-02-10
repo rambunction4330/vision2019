@@ -24,7 +24,6 @@
 
 using namespace std;
 using namespace cv;
-using namespace cv::cuda;
 // using namespace cv::gpu;
 
 //added for further changes
@@ -42,9 +41,6 @@ double yCameraAngle = (cameraAngle*9)/16;
 double relativeBearing = DONOTKNOW;
 double globalYAngle = DONOTKNOW;
 pthread_mutex_t dataLock;
-Mat src;
-GpuMat src_d;
-char* image_window = "Source Image";
 // forward declaration of functions
 void *handleClient(void *arg);
 void receiveNextCommand(char*, int);
@@ -60,14 +56,11 @@ int main(int argc , char** argv)
   int number;
   struct sockaddr_in name;
   pthread_mutex_init(&dataLock, NULL);
-  src = imread(argv[1], 1 );
-  src_d.upload(src);
   // create the socket
   if ( (s = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     perror("socket");
     exit(1);
   }
-  namedWindow( image_window, CV_WINDOW_AUTOSIZE );
   memset(&name, 0, sizeof(struct sockaddr_in));
   name.sin_family = AF_INET;
   name.sin_port = htons(PORTNUMBER);
@@ -149,7 +142,7 @@ void *capture(void *arg) {
   //cv::cuda::GpuMat gputhing
   //Ideal shape of high goal reflective tape.
   //std::vector<Point> shape;
-  GpuMat src_gpu, cvt_gpu, thr_gpu, dst_gpu, norm_gpu;
+  //GpuMat src_gpu, cvt_gpu, thr_gpu, dst_gpu, norm_gpu;
   //double minVal; double maxVal; Point minLoc; Point maxLoc;
   //Point matchLoc;
   
@@ -160,19 +153,19 @@ void *capture(void *arg) {
       //cout << "failed to capture an image" << endl;
     }
     // GpuMat src_gpu, cvt_gpu, thr_gpu, dst_gpu;
-    src_gpu.upload(frame);
+    //src_gpu.upload(frame);
     //resize(dst ,frame, frame.size(), .35, .35, INTER_AREA);   
     // cv::cvtColor(src_gpu, dst_gpu, CV_BGR2HSV);
-    gpu::cvtColor(src_gpu, cvt_gpu, CV_BGR2GRAY);
-    gpu::blur(cvt_gpu, dst_gpu , Size(3,3));
-    gpu::Canny(dst_gpu, thr_gpu, 20 , 60, 3);
+    cvtColor(frame, dst, CV_BGR2GRAY);
+    blur(dst, hsv , Size(3,3));
+    Canny(hsv, binary, 20 , 60, 3);
     //gpu::threshold(cvt_gpu, thr_gpu, 65, 255, 0);
     //gpu::matchTemplate(thr_gpu, src_d, dst_gpu , CV_TM_SQDIFF_NORMED);
     
     //cuda::normalize( dst_gpu, norm_gpu, 0, 1, NORM_MINMAX, -1, GpuMat() );
     //cuda::minMaxLoc( norm_gpu, &minVal, &maxVal, &minLoc, &maxLoc, GpuMat() );
    // matchLoc = minLoc;
-    thr_gpu.download(binary);
+    //thr_gpu.download(binary);
     // inRange(hsv, Scalar(10,28,0), Scalar(102,255,255), binary);
 
     std::vector < std::vector<Point> > contours;
@@ -214,7 +207,7 @@ void *capture(void *arg) {
 //       }
 
       double rectangularness = area / ( width * height );
-       if ( rectangularness < 0.6 ) {
+       if ( rectangularness < 0.7 ) {
         continue;
         }
 //	printf("Area is %.2f\n", area);
@@ -224,19 +217,20 @@ void *capture(void *arg) {
         cout << "match value = " << rectangularness << endl; 
     
     }
-    rectangle( frame, matchLoc, Point( matchLoc.x + src_d.cols , matchLoc.y + src_d.rows ), Scalar(255,0,0), 2, 8, 0 );
+    //rectangle( frame, matchLoc, Point( matchLoc.x + src_d.cols , matchLoc.y + src_d.rows ), Scalar(255,0,0), 2, 8, 0 );
     
      double angle = DONOTKNOW;
      double yAngle = DONOTKNOW;
-      if ( centers.size() == 2 ) {
-     double centerX = (centers[0].x + centers[1].x)/2;
-     double centerY = (centers[0].y + centers[1].y)/2;
+      if ( centers.size() > 1 ) {
+      
+     double centerX = (centers[1].x + centers[2].x)/2;
+     double centerY = (centers[1].y + centers[2].y)/2;
      Point2d aimPoint = Point2d(centerX, centerY);
      angle = (aimPoint.x - (1920/2))*cameraAngle/1920;
       yAngle = ((1080/2) - aimPoint.y )*yCameraAngle/1080;
       cout << "xangle = " << angle << endl;
       cout << "yAngle = " << yAngle << endl;
-      imshow(image_window, frame);
+      //imshow(image_window, frame);
     }
   
     // obtain the lock and copy the data
