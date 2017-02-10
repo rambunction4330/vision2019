@@ -15,8 +15,8 @@
 #include "opencv2/core.hpp"
 // #include "opencv2/gpu/gpu.hpp"
 // #include "opencv2/gpu/gpumat.hpp"
-#include "opencv2/cudaimgproc.hpp"
-#include "opencv2/core/cuda.hpp"
+//#include "opencv2/cudaimgproc.hpp"
+//#include "opencv2/core/cuda.hpp"
 #include "opencv2/cudaarithm.hpp"
 
 #define PORTNUMBER  9001 
@@ -128,20 +128,13 @@ void *capture(void *arg) {
   VideoCapture capture(0);
   capture.set(CV_CAP_PROP_FRAME_WIDTH, xres);
   capture.set(CV_CAP_PROP_FRAME_HEIGHT, yres);
-  // capture.set(CV_CAP_PROP_FPS, 3);
-  //capture.set(CV_CAP_PROP_BRIGHTNESS, 0);
-  //capture.set(CV_CAP_PROP_CONTRAST, 0);
-  //capture.set(CV_CAP_PROP_SATURATION, 255);
-  //capture.set(CV_CAP_PROP_GAIN, 0);
-  //capture.set(CV_CAP_PROP_)
   if(!capture.isOpened()) {
     cout << "Failed to connect to the camera." << endl;
   }
   Mat frame, dst, hsv, binary, tmpBinary;
   
-  //cv::cuda::GpuMat gputhing
   //Ideal shape of high goal reflective tape.
-  //std::vector<Point> shape;
+  vector<Point> shape;
   //GpuMat src_gpu, cvt_gpu, thr_gpu, dst_gpu, norm_gpu;
   //double minVal; double maxVal; Point minLoc; Point maxLoc;
   //Point matchLoc;
@@ -155,18 +148,18 @@ void *capture(void *arg) {
     // GpuMat src_gpu, cvt_gpu, thr_gpu, dst_gpu;
     //src_gpu.upload(frame);
     //resize(dst ,frame, frame.size(), .35, .35, INTER_AREA);   
-    // cv::cvtColor(src_gpu, dst_gpu, CV_BGR2HSV);
-    cvtColor(frame, dst, CV_BGR2GRAY);
-    blur(dst, hsv , Size(3,3));
-    Canny(hsv, binary, 20 , 60, 3);
-    //gpu::threshold(cvt_gpu, thr_gpu, 65, 255, 0);
+    cvtColor(frame, hsv, CV_BGR2HSV);
+    //cvtColor(frame, dst, CV_BGR2GRAY);
+    //blur(dst, hsv , Size(3,3));
+    //Canny(hsv, binary, 20 , 60, 3);
+    //threshold(dst, binary, 65, 255, 0);
     //gpu::matchTemplate(thr_gpu, src_d, dst_gpu , CV_TM_SQDIFF_NORMED);
     
     //cuda::normalize( dst_gpu, norm_gpu, 0, 1, NORM_MINMAX, -1, GpuMat() );
     //cuda::minMaxLoc( norm_gpu, &minVal, &maxVal, &minLoc, &maxLoc, GpuMat() );
-   // matchLoc = minLoc;
+    //matchLoc = minLoc;
     //thr_gpu.download(binary);
-    // inRange(hsv, Scalar(10,28,0), Scalar(102,255,255), binary);
+    inRange(hsv, Scalar(10,28,0), Scalar(102,255,255), binary);
 
     std::vector < std::vector<Point> > contours;
     std::vector < std::vector<Point> > filteredContours;
@@ -221,10 +214,10 @@ void *capture(void *arg) {
     
      double angle = DONOTKNOW;
      double yAngle = DONOTKNOW;
-      if ( centers.size() > 1 ) {
+      if ( centers.size() == 2 ) {
       
-     double centerX = (centers[1].x + centers[2].x)/2;
-     double centerY = (centers[1].y + centers[2].y)/2;
+     double centerX = (centers[0].x + centers[1].x)/2;
+     double centerY = (centers[0].y + centers[1].y)/2;
      Point2d aimPoint = Point2d(centerX, centerY);
      angle = (aimPoint.x - (1920/2))*cameraAngle/1920;
       yAngle = ((1080/2) - aimPoint.y )*yCameraAngle/1080;
