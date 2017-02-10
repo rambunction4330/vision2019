@@ -21,4 +21,8 @@ arpa/inet.h
 -
 netdb.h
 -
+ros/ros.h
+/home/jeffrey/vision2017/server/ros/ros.h
+sensor_msgs/LaserScan.h
+/home/jeffrey/vision2017/server/sensor_msgs/LaserScan.h
 

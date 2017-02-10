@@ -8,7 +8,10 @@
 #include<sys/socket.h>    //socket
 #include<arpa/inet.h> //inet_addr
 #include<netdb.h> //hostent
- 
+#include<sys/types.h>
+#include<stdlib.h>
+#include<netinet/in.h>
+#include<unistd.h>
 using namespace std;
  
 /**
@@ -130,7 +133,7 @@ string tcp_client::receive(int size=512)
     string reply;
      
     //Receive a reply from the server
-    if( recv(sock , buffer , sizeof(buffer) , 0) < 0)
+    if( read(sock , buffer , sizeof(buffer)) < 0)
     {
         puts("recv failed");
     }
@@ -139,25 +142,41 @@ string tcp_client::receive(int size=512)
     return reply;
 }
  
+class LeddarData {
+
+	int segNum, distCm, amp ;
+	public :
+	void set_values(int x,int y,int z); 
+};
+	void LeddarData::set_values(int x, int y, int z)
+	{	
+		segNum=x;
+		distCm=y;
+		amp=z;
+	}
 int main(int argc , char *argv[])
 {
+	LeddarData obs[16];
     tcp_client c;
     string host;
-     
+     string msg;
     cout<<"Enter hostname : ";
     cin>>host;
      
     //connect to host
     c.conn(host , 9003);
      
-    //send some data
-    //c.send_data("GET / HTTP/1.1\r\n\r\n");
+    //cout<<"Enter message : ";
+	//cin>>msg;
+    c.send_data("3");
      
     //receive and echo reply
     cout<<"----------------------------\n\n";
     cout<<c.receive(1024);
+	//c.send_data("laser");
     cout<<"\n\n----------------------------\n\n";
      
     //done
     return 0;
 }
+
