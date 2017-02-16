@@ -1,0 +1,32 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/jeffrey/vision2017/riocom/main.cpp
+iostream
+-
+stdio.h
+-
+string.h
+-
+string
+-
+sys/socket.h
+-
+arpa/inet.h
+-
+netdb.h
+-
+sys/types.h
+-
+stdlib.h
+-
+netinet/in.h
+-
+unistd.h
+-
+
