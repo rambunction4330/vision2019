@@ -125,7 +125,7 @@ int main(int argc , char** argv)
 
 void *capture(void *arg) {  
 
-  VideoCapture capture(0);
+  VideoCapture capture(1);
   capture.set(CV_CAP_PROP_FRAME_WIDTH, xres);
   capture.set(CV_CAP_PROP_FRAME_HEIGHT, yres);
   // capture.set(CV_CAP_PROP_FPS, 3);
@@ -155,10 +155,10 @@ void *capture(void *arg) {
     // GpuMat src_gpu, cvt_gpu, thr_gpu, dst_gpu;
     //src_gpu.upload(frame);
     //resize(dst ,frame, frame.size(), .35, .35, INTER_AREA);   
-    // cv::cvtColor(src_gpu, dst_gpu, CV_BGR2HSV);
-    cvtColor(frame, dst, CV_BGR2GRAY);
-    blur(dst, hsv , Size(3,3));
-    Canny(hsv, binary, 20 , 60, 3);
+    cvtColor(frame, hsv, CV_BGR2HLS);
+    //cvtColor(frame, dst, CV_BGR2GRAY);
+    //blur(dst, hsv , Size(3,3));
+    //Canny(hsv, binary, 20 , 60, 3);
     //gpu::threshold(cvt_gpu, thr_gpu, 65, 255, 0);
     //gpu::matchTemplate(thr_gpu, src_d, dst_gpu , CV_TM_SQDIFF_NORMED);
     
@@ -166,7 +166,7 @@ void *capture(void *arg) {
     //cuda::minMaxLoc( norm_gpu, &minVal, &maxVal, &minLoc, &maxLoc, GpuMat() );
    // matchLoc = minLoc;
     //thr_gpu.download(binary);
-    // inRange(hsv, Scalar(10,28,0), Scalar(102,255,255), binary);
+     inRange(hsv, Scalar(40,47,40), Scalar(88,115,255), binary);
 
     std::vector < std::vector<Point> > contours;
     std::vector < std::vector<Point> > filteredContours;
@@ -221,10 +221,10 @@ void *capture(void *arg) {
     
      double angle = DONOTKNOW;
      double yAngle = DONOTKNOW;
-      if ( centers.size() > 1 ) {
+      if ( centers.size() == 2 ) {
       
-     double centerX = (centers[1].x + centers[2].x)/2;
-     double centerY = (centers[1].y + centers[2].y)/2;
+     double centerX = (centers[0].x + centers[1].x)/2;
+     double centerY = (centers[0].y + centers[1].y)/2;
      Point2d aimPoint = Point2d(centerX, centerY);
      angle = (aimPoint.x - (1920/2))*cameraAngle/1920;
       yAngle = ((1080/2) - aimPoint.y )*yCameraAngle/1080;
