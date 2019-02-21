@@ -13,7 +13,6 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/core.hpp"
-#include "opencv2/cudaarithm.hpp"
 #include <fstream>
 
 #define PORTNUMBER  9001 
@@ -24,11 +23,11 @@ using namespace cv;
 // using namespace cv::gpu;
 
 //added for further changes
-int iLowH = 38;
-int iHighH = 101;
-int iLowS = 24; 
+int iLowH = 0;
+int iHighH = 255;
+int iLowS = 78; 
 int iHighS = 255;
-int iLowV = 197;
+int iLowV = 57;
 int iHighV = 255;
 int fr = 29;
 int xres = 1920;
@@ -44,10 +43,13 @@ void receiveNextCommand(char*, int);
 void *capture(void *arg);
 //import images
 //gpu::setDevice(0);
+const double _targetWidth = 3.31;
+const double _targetHeight = 5.83;
 
 int main(int argc , char** argv)
 {
-
+ofstream fout("output.txt");
+	fout<<"main method started successfully"<<endl;
   int n, s;
   socklen_t len;
   int max;
@@ -90,6 +92,10 @@ int main(int argc , char** argv)
     perror("listen");
     exit(1);
   }
+
+	//FELIX EDIT FOR DEBUGGING
+	fout<<"captured";
+	
  
   pthread_t captureThreadId;
   int i = 3;
@@ -99,8 +105,7 @@ int main(int argc , char** argv)
   pthread_detach(captureThreadId);
 
   while(true) {
-	
-
+	fout<<"anothyer"<<endl;
     // block until get a request
     int ns = accept(s, (struct sockaddr *) &name, &len);
 
@@ -117,7 +122,7 @@ int main(int argc , char** argv)
     // it is important to detach the thread to avoid a memory leak
     pthread_detach(threadId);
   } 
-
+  fout.close();
   close(s);
   exit(0);
 }
@@ -134,36 +139,17 @@ void *capture(void *arg) {
   
   //Ideal shape of high goal reflective tape.
   vector<Point> shape;
-  //GpuMat src_gpu, cvt_gpu, thr_gpu, dst_gpu, norm_gpu;
-  //double minVal; double maxVal; Point minLoc; Point maxLoc;
-  //Point matchLoc;
-  
+
   while(true) {
 		
     capture >> frame;
     if(dst.empty()) {
       //cout << "failed to capture an image" << endl;
     }
-    // GpuMat src_gpu, cvt_gpu, thr_gpu, dst_gpu;
-    //src_gpu.upload(frame);
-    //resize(dst ,frame, frame.size(), .35, .35, INTER_AREA);   
-    cvtColor(frame, hsv, CV_BGR2HLS);
-    //cvtColor(frame, dst, CV_BGR2GRAY);
-    //blur(dst, hsv , Size(3,3));
-    //Canny(hsv, binary, 20 , 60, 3);
-    //gpu::threshold(cvt_gpu, thr_gpu, 65, 255, 0);
-    //cvtColor(frame, hsv, CV_BGR2HSV);
-    //cvtColor(frame, dst, CV_BGR2GRAY);
-    //blur(dst, hsv , Size(3,3));
-    //Canny(hsv, binary, 20 , 60, 3);
-    //threshold(dst, binary, 65, 255, 0);
-    //gpu::matchTemplate(thr_gpu, src_d, dst_gpu , CV_TM_SQDIFF_NORMED);
+
+    cvtColor(frame, hsv, CV_BGR2HSV);
     
-    //cuda::normalize( dst_gpu, norm_gpu, 0, 1, NORM_MINMAX, -1, GpuMat() );
-    //cuda::minMaxLoc( norm_gpu, &minVal, &maxVal, &minLoc, &maxLoc, GpuMat() );
-    //matchLoc = minLoc;
-    //thr_gpu.download(binary);
-     inRange(hsv, Scalar(40,47,40), Scalar(88,115,255), binary);
+     inRange(hsv, Scalar(iLowH,iLowS,iLowV), Scalar(iHighH,iHighS,iHighV), binary);
 
     std::vector < std::vector<Point> > contours;
     std::vector < std::vector<Point> > filteredContours;
@@ -171,62 +157,69 @@ void *capture(void *arg) {
     tmpBinary = binary.clone();
     findContours(tmpBinary, contours, RETR_LIST, CHAIN_APPROX_NONE);
     tmpBinary.release();
+
+    
     
     //double bestShapeMatch = DONOTKNOW;
     //Point2d pointOfBestShapeMatch;
-    double minimumArea = 300;
+    double minimumArea = 800;
     //bool foundBestMatch = false;    
 
-    for (size_t contourIdx = 0; contourIdx < contours.size(); contourIdx++) {
-      Point2d center;
-      const Moments moms = moments(Mat(contours[contourIdx]));
- 
-      // filter blobs which are too small
-      double area = moms.m00;
-      if ( area < minimumArea ) {
-        continue;
-      }
-      Rect rect = boundingRect(contours[contourIdx]);
-      double width = rect.width;
-      double height = rect.height;
-      double aspectRatio = height / width;
-      double perfectAspectRatio = 2.5;
-      //double bigAspectRatio = (4/15);
-      //double smallAspectRatio = (2/15);
-      double aspectRatioTolerance = 0.5;
-       if ( aspectRatio < perfectAspectRatio - aspectRatioTolerance ||
+      for (size_t contourIdx = 0; contourIdx < contours.size(); contourIdx++) {
+    Point2d center;
+    const Moments moms = moments(Mat(contours[contourIdx]));
+	
+    // filter blobs which are too small
+    double area = moms.m00;
+    if ( area < 300 ) {
+      continue;
+    }
+    Rect rect = boundingRect(contours[contourIdx]);
+    double width = rect.width;
+    double height = rect.height;
+    double aspectRatio = height / width;
+    double perfectAspectRatio = _targetHeight/_targetWidth;
+    cout << "Perfect A/S: " << perfectAspectRatio << endl;
+    cout << "A/S: " << aspectRatio << endl;
+    double aspectRatioTolerance = 0.4;
+    if ( aspectRatio < perfectAspectRatio - aspectRatioTolerance ||
          aspectRatio > perfectAspectRatio + aspectRatioTolerance ) {
-         continue;
-       }
-//       if ( aspectRatio < smallAspectRatio - aspectRatioTolerance ||
-//         aspectRatio > smallAspectRatio + aspectRatioTolerance ) {
-//         continue;
-//       }
+      continue;
+    }
+    cout << "Height:" << height << ", Width: " << width << endl;
+    // else if(aspectRatio < smallAspectRatio - aspectRatioTolerance || aspectRatio > smallAspectRatio + aspectRatioTolerance){
+	// continue;
+	// }
 
-      double rectangularness = area / ( width * height );
-       if ( rectangularness < 0.7 ) {
-        continue;
-        }
-//	printf("Area is %.2f\n", area);
-        center = Point2d(moms.m10 / moms.m00, moms.m01 / moms.m00);
-        filteredContours.push_back(contours[contourIdx]);
-        centers.push_back(center);
-        cout << "match value = " << rectangularness << endl; 
+       // else if(aspectRatio < bigAspectRatio - aspectRatioTolerance || aspectRatio > bigAspectRatio + aspectRatioTolerance){
+	// continue;
+//	}
+
+    double rectangularness = area / ( width * height );
+    if ( rectangularness < 0.5 ) {
+      continue;
+    }
+	
+    printf("Area is %.2f\n", area);
+    center = Point2d(moms.m10 / moms.m00, moms.m01 / moms.m00);
+    filteredContours.push_back(contours[contourIdx]);
+    centers.push_back(center); 
     
     }
     //rectangle( frame, matchLoc, Point( matchLoc.x + src_d.cols , matchLoc.y + src_d.rows ), Scalar(255,0,0), 2, 8, 0 );
     
      double angle = DONOTKNOW;
      double yAngle = DONOTKNOW;
-      if ( centers.size() == 2 ) {
+     if ( centers.size() == 2 ) {
       
-     double centerX = (centers[0].x + centers[1].x)/2;
-     double centerY = (centers[0].y + centers[1].y)/2;
-     Point2d aimPoint = Point2d(centerX, centerY);
-     angle = (aimPoint.x - (1920/2))*cameraAngle/1920;
-      yAngle = ((1080/2) - aimPoint.y )*yCameraAngle/1080;
-      cout << "xangle = " << angle << endl;
-      cout << "yAngle = " << yAngle << endl;
+       double centerX = (centers[0].x + centers[1].x)/2;
+       double centerY = (centers[0].y + centers[1].y)/2;
+       printf("Aim Point is (%.2f, %.2f)\n", centerX, centerY);
+       Point2d aimPoint = Point2d(centerX, centerY);
+       angle = (aimPoint.x - (1920/2))*cameraAngle/1920;
+       yAngle = ((1080/2) - aimPoint.y )*yCameraAngle/1080;
+       cout << "xangle = " << angle << endl;
+       cout << "yAngle = " << yAngle << endl;
       //imshow(image_window, frame);
     }
   

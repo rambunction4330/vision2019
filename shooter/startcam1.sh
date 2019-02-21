@@ -6,6 +6,4 @@ v4l2-ctl --device 0 \
  --set-ctrl gain=0 \
  --set-ctrl sharpness=0 \
  --set-ctrl exposure_auto=1 \
- --set-ctrl exposure_absolute=21 \
- --set-ctrl white_balance_temperature_auto=0 \
- --set-ctrl white_balance_temperature=2000
+ --set-ctrl exposure_absolute=60 

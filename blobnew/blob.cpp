@@ -9,18 +9,20 @@ using namespace cv;
 using namespace std;
 
 /// Global variables
-Mat src, src_hls, color_filtered, test1, test2, test3;
+Mat src, src_hls, res, color_filtered, test1, test2, test3;
 int iLowH = 0;
-int iHighH = 179;
-int iLowS = 28; 
+int iHighH = 255;
+int iLowS = 104; 
 int iHighS = 255;
-int iLowL = 0;
+int iLowL = 57;
 int iHighL = 255;
 int thresh = 100;
 int max_thresh = 255;
 const char* controls_window = "Controls";
 const char* color_filter_window = "Binary Image";
 const char* cleaned_window = "Cleaned Image";
+const double _targetWidth = 3.31;
+const double _targetHeight = 5.83;
 
 /// Function header
 void clean_demo( int, void* );
@@ -30,18 +32,19 @@ int main( int, char** argv )
 {
   /// Load source image and convert it to gray
   src = imread( argv[1], 1 );
-  cvtColor( src, src_hls, CV_BGR2HLS );
+  resize(src, res, Size(), .6, .6);
+  cvtColor( res, src_hls, CV_BGR2HSV );
 
   /// Create a window and a trackbar
   namedWindow( controls_window, CV_WINDOW_AUTOSIZE );
-  createTrackbar( "LowH: ", controls_window, &iLowH, 179, clean_demo );
-  createTrackbar( "HighH: ", controls_window, &iHighH, 179, clean_demo );
+  createTrackbar( "LowH: ", controls_window, &iLowH, 255, clean_demo );
+  createTrackbar( "HighH: ", controls_window, &iHighH, 255, clean_demo );
   createTrackbar( "LowS: ", controls_window, &iLowS, 255, clean_demo );
   createTrackbar( "HighS: ", controls_window, &iHighS, 255, clean_demo );
   createTrackbar( "LowL: ", controls_window, &iLowL, 255, clean_demo );
   createTrackbar( "HighL: ", controls_window, &iHighL, 255, clean_demo );
   createTrackbar( " Canny thresh:", controls_window, &thresh, max_thresh, clean_demo );
-  imshow( controls_window, src );
+  imshow( controls_window, res );
 
   clean_demo( 0, 0 );
 
@@ -56,18 +59,18 @@ void clean_demo( int, void* )
   inRange( src_hls, Scalar(iLowH, iLowS, iLowL), Scalar(iHighH, iHighS, iHighL), color_filtered ); 
   namedWindow( color_filter_window, CV_WINDOW_AUTOSIZE );
   imshow( color_filter_window, color_filtered );
-  cvtColor( src , test1 , CV_BGR2GRAY);
-  blur( test1, test2, Size(3,3) );
-  Canny(test2 , test3 , thresh , thresh*2 , 3);
+  cvtColor( res , test1 , CV_BGR2GRAY);
+  //blur( test1, test2, Size(3,3) );
+  Canny(color_filtered , test2 , thresh , thresh*2 , 3);
 
   std::vector < std::vector<Point> > contours;
   std::vector < std::vector<Point> > filteredContours;
   std::vector<Point2d> centers;
   
   Mat tmpBinaryImage = color_filtered.clone();
-  findContours(test3, contours, RETR_LIST, CHAIN_APPROX_NONE);
+  findContours(test2, contours, RETR_LIST, CHAIN_APPROX_NONE);
   Mat cleanedImage;
-  cvtColor( test3, cleanedImage, CV_GRAY2RGB );
+  cvtColor( test2, cleanedImage, CV_GRAY2RGB );
   
 
   cleanedImage.setTo(Scalar(255,255,255));
@@ -85,14 +88,15 @@ void clean_demo( int, void* )
     double width = rect.width;
     double height = rect.height;
     double aspectRatio = height / width;
-    double perfectAspectRatio = 2.5;
-    double bigAspectRatio = (4/15);
-    double smallAspectRatio = (2/15);
-    double aspectRatioTolerance = 0.5;
+    double perfectAspectRatio = _targetHeight/_targetWidth;
+    cout << "Perfect A/S: " << perfectAspectRatio << endl;
+    cout << "A/S: " << aspectRatio << endl;
+    double aspectRatioTolerance = 0.55;
     if ( aspectRatio < perfectAspectRatio - aspectRatioTolerance ||
          aspectRatio > perfectAspectRatio + aspectRatioTolerance ) {
       continue;
     }
+    cout << "Height:" << height << ", Width: " << width << endl;
     // else if(aspectRatio < smallAspectRatio - aspectRatioTolerance || aspectRatio > smallAspectRatio + aspectRatioTolerance){
 	// continue;
 	// }
@@ -102,7 +106,7 @@ void clean_demo( int, void* )
 //	}
 
     double rectangularness = area / ( width * height );
-    if ( rectangularness < 0.7 ) {
+    if ( rectangularness < 0.5 ) {
       continue;
     }
 	
@@ -111,6 +115,7 @@ void clean_demo( int, void* )
     circle( cleanedImage, center, 2, Scalar(255,0,0), 2, 8, 0);
     filteredContours.push_back(contours[contourIdx]);
     centers.push_back(center);
+    Canny(test1 , test2 , thresh , thresh*2 , 3);
   }
 
   drawContours( cleanedImage, filteredContours, -1, Scalar(0,255,0) );
